@@ -23,17 +23,17 @@ def chat_with_user(request: ChatMessage):
         }
     }
 
-mockMessages = [
-    {"role": "system", "content": SYSTEM_PROMPT},
-    {"role": "user", "content": "Nam"},
-    {"role": "assistant", "content": "Nhập chiều cao"},
-    {"role": "user", "content": "212"},
-    {"role": "user", "content": "Nhập cân nặng"},
-    {"role": "user", "content": "70"},
-]
-
-@app.get("/chat")
-def chat_with_user():
-    return {"hello":chat_with_openai(mockMessages)}
+# mockMessages = [
+#     {"role": "system", "content": SYSTEM_PROMPT},
+#     {"role": "user", "content": "Nam"},
+#     {"role": "assistant", "content": "Nhập chiều cao"},
+#     {"role": "user", "content": "212"},
+#     {"role": "user", "content": "Nhập cân nặng"},
+#     {"role": "user", "content": "70"},
+# ]
+#
+# @app.get("/chat")
+# def chat_with_user():
+#     return {"hello":chat_with_openai(mockMessages)}
 
 
