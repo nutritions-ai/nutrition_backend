@@ -5,13 +5,38 @@ from constants import *
 import time
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
 from openai import OpenAI, APIError, RateLimitError, Timeout
+from models import *
 
 client = OpenAI(
     base_url="https://aiportalapi.stu-platform.live/jpe",
-    api_key=""
+    api_key="sk-e33XdbP5qVj57ONqvLnrpw"
 )
 
 history = []
+
+
+def analyze_health(health_data: dict):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_content_analyst},
+            {"role": "user", "content": f"Đây là dữ liệu người dùng: {health_data}"},
+        ],
+        temperature=0.2
+    )
+    return response.choices[0].message.content
+
+def create_meal(health_data: dict, user_options: dict) -> dict:
+    response = client.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT_MEAL_PLAN},
+            {"role": "user", "content": f"Đây là dữ liệu người dùng: {health_data}, options: {user_options}"},
+        ],
+        temperature=0.6,
+        response_format=MealPlan
+    )
+    return json.loads(response.choices[0].message.content)
 
 
 @retry(

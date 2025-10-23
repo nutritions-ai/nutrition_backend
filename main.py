@@ -1,6 +1,8 @@
 from fastapi import FastAPI
-from openai_client import chat_with_openai, SYSTEM_PROMPT, history
+from openai_client import *
 from models import *
+from mock import *
+import uvicorn
 app = FastAPI(title="Health Chatbot API")
 
 @app.post("/chat")
@@ -23,17 +25,20 @@ def chat_with_user(request: ChatMessage):
         }
     }
 
-# mockMessages = [
-#     {"role": "system", "content": SYSTEM_PROMPT},
-#     {"role": "user", "content": "Nam"},
-#     {"role": "assistant", "content": "Nhập chiều cao"},
-#     {"role": "user", "content": "212"},
-#     {"role": "user", "content": "Nhập cân nặng"},
-#     {"role": "user", "content": "70"},
-# ]
-#
-# @app.get("/chat")
-# def chat_with_user():
-#     return {"hello":chat_with_openai(mockMessages)}
+mockMessages = [
+    {"role": "system", "content": SYSTEM_PROMPT},
+    {"role": "user", "content": "Nam"},
+    {"role": "assistant", "content": "Nhập chiều cao"},
+    {"role": "user", "content": "212"},
+    {"role": "user", "content": "Nhập cân nặng"},
+    {"role": "user", "content": "70"},
+]
+
+@app.get("/chat")
+def chat_with_user():
+    return {"response":create_meal(health_data, user_options)}
+
+if __name__ == '__main__':
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
 
