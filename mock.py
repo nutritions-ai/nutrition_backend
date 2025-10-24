@@ -1,4 +1,4 @@
-health_data = {
+HEALTH_DATA = {
     "health_metrics": {
         "height_cm": 175,
         "weight_kg": 78,        # tăng cân → có thể thừa cân
@@ -48,7 +48,7 @@ health_improvement_options = {
     ]
 }
 
-user_options = {
+USER_OPTIONS = {
     "user_options": [
         {
             "id": "improve_health_metrics",
