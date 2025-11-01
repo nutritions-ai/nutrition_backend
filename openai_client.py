@@ -1,19 +1,112 @@
-import json
-
 import openai
+from langchain_classic.chains.conversation.base import ConversationChain
+from langchain_classic.chains.retrieval_qa.base import RetrievalQA
+from langchain_classic.memory import ConversationBufferMemory
+from langchain_core.messages import SystemMessage
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import OpenAI, APIError, RateLimitError, Timeout
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
-
 from constants import *
 from models import *
 from models_sql import UserProfile
+import json
+import time
+from pinecone import Pinecone, ServerlessSpec
+from langchain_community.vectorstores import Pinecone as PineconeVectorStore
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI
+
+pc = Pinecone(api_key="pcsk_2anjVo_RLgiFMaWs1NoqiueLPmqCoMBjVKNotYLBS6z9rh4oQJ7bZXDi1iFWYCYSXQ3Lz1")
+
+index_name = "nutrition-index"
+
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small",
+                              base_url="https://aiportalapi.stu-platform.live/jpe",
+                              api_key="sk-L7kqR1aerMHLYMrkKTgYNw")
+
+# Create index if not exists ----
+if index_name not in pc.list_indexes().names():
+    print(f"Creating index '{index_name}' ...")
+    pc.create_index(
+        name=index_name,
+        dimension=1536,
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1")
+    )
+    # Load documents and populate index ----
+    loader = PyPDFLoader("data/meal_data.pdf")
+    docs = loader.load()
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    split_docs = splitter.split_documents(docs)
+
+    vectorstore = PineconeVectorStore.from_documents(
+        documents=split_docs,
+        embedding=embeddings,
+        index_name=index_name
+    )
+    # Wait until index is ready
+    while not pc.describe_index(index_name).status["ready"]:
+        print("Waiting for index to be ready...")
+        time.sleep(3)
+
+vectorstore = PineconeVectorStore.from_existing_index(
+    index_name=index_name,
+    embedding=embeddings
+)
+
+loader = PyPDFLoader("data/meal_data.pdf")
+docs = loader.load()
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+split_docs = splitter.split_documents(docs)
+print(split_docs)
+
+retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    base_url="https://aiportalapi.stu-platform.live/jpe",
+    api_key="sk-e33XdbP5qVj57ONqvLnrpw"
+)
+
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    retriever=retriever,
+    return_source_documents=True
+)
+
+memory = ConversationBufferMemory(return_messages=True)
+memory.chat_memory.add_message(SystemMessage(
+    content=SYSTEM_PROMPT
+))
+
+conversation = ConversationChain(llm=llm, memory=memory, verbose=True)
+
+
+def chat(user_input: str):
+    context = get_context(user_input)
+    prompt = f"{context}User: {user_input}"
+    response = conversation.predict(input=prompt)
+    return response
+
+
+# ---- Helper: optional context from vectorstore ----
+def get_context(user_input: str):
+    results = retriever.vectorstore.similarity_search_with_score(user_input, k=3)
+    good_results = [doc for doc, score in results if score < 0.4]
+
+    if not good_results:
+        return ""
+
+    context_text = "\n".join([doc.page_content for doc in good_results])
+    return f"Một số thông tin tham khảo (không liên quan đến tình trạng/thông tin của user): #thamkhao \n{context_text}\n\n #thamkhao"
 
 client = OpenAI(
     base_url="https://aiportalapi.stu-platform.live/jpe",
     api_key="sk-e33XdbP5qVj57ONqvLnrpw"
 )
-
-history = []
 
 
 def analyze_health(health_data: dict) -> dict:
@@ -28,17 +121,20 @@ def analyze_health(health_data: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
+
 def create_meal(user_profile: UserProfile, user_options: dict) -> dict:
     response = client.chat.completions.parse(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT_MEAL_PLAN},
-            {"role": "user", "content": f"Đây là dữ liệu người dùng: {user_profile.model_dump_json()}, options: {user_options}"},
+            {"role": "user",
+             "content": f"Đây là dữ liệu người dùng: {user_profile.model_dump_json()}, options: {user_options}"},
         ],
         temperature=0.6,
         response_format=MealPlanData
     )
     return json.loads(response.choices[0].message.content)
+
 
 @retry(
     retry=retry_if_exception_type((APIError, RateLimitError, Timeout, ConnectionError)),
@@ -46,65 +142,6 @@ def create_meal(user_profile: UserProfile, user_options: dict) -> dict:
     stop=stop_after_attempt(3),
     reraise=True
 )
-def chat_with_openai(messages):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            temperature=0.2
-        )
-
-        message = response.choices[0].message
-
-        # If model calls a tool
-        if hasattr(message, "tool_calls") and message.tool_calls:
-            for tool_call in message.tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = json.loads(tool_call.function.arguments)
-
-                if tool_name == "calculate_bmi":
-                    height = tool_args.get("height")
-                    weight = tool_args.get("weight")
-
-                    if not height or not weight:
-                        raise ValueError("Missing height or weight for BMI calculation.")
-
-                    bmi = weight / ((height / 100) ** 2)
-
-                    assistant_message = {
-                        "role": "assistant",
-                        "content": f"Chỉ số BMI của bạn là {bmi:.1f}."
-                    }
-                    messages.append(assistant_message)
-                    history.append(assistant_message)
-
-                    messages.append({
-                        "role": "user",
-                        "content": "Tạo thực đơn hàng ngày dựa trên thông tin cung cấp"
-                    })
-
-                    # Continue chat
-                    followup = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=messages,
-                        temperature=0.2
-                    )
-                    return followup
-
-        return response
-
-    except (APIError, RateLimitError, Timeout) as e:
-        print(f"OpenAI API error: {e}. Retrying...")
-        raise
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {
-            "error": str(e),
-            "message": "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau."
-        }
-
 def summary_user_chat():
     """
     Tóm tắt các câu hỏi của user trong đoạn hội thoại, gom nhóm theo chủ đề.

@@ -30,20 +30,11 @@ app.add_middleware(
 @app.post("/chat")
 def chat_with_user(request: ChatMessage):
     user_message = request.message
-
-    history.append({"role": "user", "content": user_message})
-
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
-
-    response = chat_with_openai(messages)
-
-    assistant_message = response.choices[0].message
-    history.append({"role": "assistant", "content": assistant_message.content})
-
+    content = chat(user_message)
     return {
         "response": {
-            "role": assistant_message.role,
-            "content": assistant_message.content
+            "role": "assistant",
+            "content": content
         }
     }
 

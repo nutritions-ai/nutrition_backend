@@ -13,7 +13,7 @@ class MealPlan(SQLModel, table=True):
     user_id: int = Field(foreign_key="userprofile.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     meal_data_json: str  # store the AI meal plan as JSON text
-    user: Optional[UserProfile] = Relationship(back_populates="meal_plans")
+    # user: Optional[UserProfile] = Relationship(back_populates="meal_plans")
 
     def get_data(self) -> MealPlanData:
         """Convert stored JSON string → Pydantic model"""

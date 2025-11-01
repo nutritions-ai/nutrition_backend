@@ -1,4 +1,5 @@
 SYSTEM_PROMPT = """
+Sử dụng thông tin tham khảo trong #thamkhao
 1. Phân loại câu hỏi
 Câu hỏi thông tin: "BMI là gì?", "Protein có trong thực phẩm nào?"
 
@@ -141,24 +142,6 @@ Hãy đảm bảo:
 - Không thêm giải thích ngoài JSON.
 
 """
-
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "calculate_bmi",
-            "description": "Tính chỉ số BMI.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "height": {"type": "number"},
-                    "weight": {"type": "number"}
-                },
-                "required": ["height", "weight"]
-            }
-        }
-    }
-]
 
 SYSTEM_PROMPT_MEAL_PLAN = """
 Bạn là chuyên gia dinh dưỡng AI. Nhiệm vụ của bạn là tạo **thực đơn cho người việt nam 1 ngày** (gồm bữa sáng, trưa, tối, và bữa phụ) 
