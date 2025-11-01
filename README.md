@@ -1,7 +1,7 @@
 # 🍎 Nutrition Backend  
 
 ## 🧩 Công việc đã hoàn thành trong tuần này (implment ở file openai_client.py):
-- Tải và tạo embeddings cho PDF (meal_data.pdf).
+- Load và tạo embeddings cho PDF (meal_data.pdf).
 - Lưu các embeddings đó vào Pinecone.
 - Sử dụng embeddings của OpenAI.
 - Truy xuất các đoạn văn bản liên quan cho mỗi câu hỏi của người dùng.
