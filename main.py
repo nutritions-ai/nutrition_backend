@@ -97,6 +97,10 @@ mockMessages = [
 def chat_with_user():
     return {"response": create_meal(HEALTH_DATA, USER_OPTIONS)}
 
+@app.get("/chat/user_summary")
+def chat_user_summary():
+    return {"response": summary_user_chat()}
+
 @app.post("/analyze-result")
 def analyze_result(data: UserProfileCreate, session: Session = Depends(get_session)):
     crud.upsert_user_profile(session, data)

@@ -1,10 +1,10 @@
-from openai import OpenAI
-import tool_functions
 import json
-from constants import *
-import time
-from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
+
+import openai
 from openai import OpenAI, APIError, RateLimitError, Timeout
+from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
+
+from constants import *
 from models import *
 from models_sql import UserProfile
 
@@ -39,7 +39,6 @@ def create_meal(user_profile: UserProfile, user_options: dict) -> dict:
         response_format=MealPlanData
     )
     return json.loads(response.choices[0].message.content)
-
 
 @retry(
     retry=retry_if_exception_type((APIError, RateLimitError, Timeout, ConnectionError)),
@@ -105,3 +104,44 @@ def chat_with_openai(messages):
             "error": str(e),
             "message": "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau."
         }
+
+def summary_user_chat():
+    """
+    Tóm tắt các câu hỏi của user trong đoạn hội thoại, gom nhóm theo chủ đề.
+    Trả về danh sách JSON gồm các phần tử: {"summary_sentence": ..., "source_index": ...}
+    """
+
+    # Lọc ra các câu hỏi của user
+    user_questions = [
+        {"index": i, "content": msg["content"]}
+        for i, msg in enumerate(history)
+        if msg["role"] == "user"
+    ]
+
+    # Tạo prompt yêu cầu tóm tắt
+    prompt = (
+        "Hãy tóm tắt ngắn gọn các câu hỏi của người dùng trong đoạn hội thoại.\n"
+        "Nếu nhiều câu hỏi cùng chủ đề, hãy gộp thành 1-2 câu summary.\n"
+        "Mỗi summary phải gắn source_index tới câu hỏi gốc gần nghĩa nhất.\n"
+        "Mỗi summary phải giống như đang trả lời trực tiếp trong hội thoại, "
+        "không dùng 'người dùng hỏi' hay 'trợ lý trả lời'.\n"
+        "Chỉ tóm tắt câu hỏi của user, không tóm tắt câu trả lời của assistant.\n"
+        "Trả lời dưới dạng JSON list với các trường: summary_sentence, source_index.\n\n"
+        f"Các câu hỏi của user:\n{user_questions}\n"
+        "Chỉ trả lời về JSON, không giải thích thêm."
+    )
+
+    # Gọi OpenAI API
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+    )
+
+    # Trích xuất và chuyển đổi JSON
+    content = response['choices'][0]['message']['content']
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        print("❌ Lỗi định dạng JSON từ phản hồi.")
+        return []
