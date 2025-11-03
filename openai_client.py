@@ -17,7 +17,9 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_openai import ChatOpenAI
 
-pc = Pinecone(api_key="pcsk_2anjVo_RLgiFMaWs1NoqiueLPmqCoMBjVKNotYLBS6z9rh4oQJ7bZXDi1iFWYCYSXQ3Lz1")
+import os
+os.environ["PINECONE_API_KEY"] = "pcsk_2anjVo_RLgiFMaWs1NoqiueLPmqCoMBjVKNotYLBS6z9rh4oQJ7bZXDi1iFWYCYSXQ3Lz1"
+pc = Pinecone()
 
 index_name = "nutrition-index"
 
