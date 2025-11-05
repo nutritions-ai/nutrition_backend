@@ -1,7 +1,11 @@
+import base64
+import io
 import json
 
 import openai
+from PIL import Image
 from openai import OpenAI, APIError, RateLimitError, Timeout
+from openai.types import Image
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
 
 from constants import *
@@ -28,17 +32,20 @@ def analyze_health(health_data: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
+
 def create_meal(user_profile: UserProfile, user_options: dict) -> dict:
     response = client.chat.completions.parse(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT_MEAL_PLAN},
-            {"role": "user", "content": f"Đây là dữ liệu người dùng: {user_profile.model_dump_json()}, options: {user_options}"},
+            {"role": "user",
+             "content": f"Đây là dữ liệu người dùng: {user_profile.model_dump_json()}, options: {user_options}"},
         ],
         temperature=0.6,
         response_format=MealPlanData
     )
     return json.loads(response.choices[0].message.content)
+
 
 @retry(
     retry=retry_if_exception_type((APIError, RateLimitError, Timeout, ConnectionError)),
@@ -105,6 +112,7 @@ def chat_with_openai(messages):
             "message": "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau."
         }
 
+
 def summary_user_chat():
     """
     Tóm tắt các câu hỏi của user trong đoạn hội thoại, gom nhóm theo chủ đề.
@@ -145,3 +153,52 @@ def summary_user_chat():
     except json.JSONDecodeError:
         print("❌ Lỗi định dạng JSON từ phản hồi.")
         return []
+
+
+def build_prompt():
+    return """
+Bạn là trợ lý nhận diện món ăn. Khi được cung cấp một hình ảnh, hãy xác định tất cả các món ăn có thể nhìn thấy.
+
+Với mỗi món ăn, hãy trả về:
+- Tên món ăn
+- Lượng calo ước tính (gần đúng)
+- Tọa độ khung bao (bounding box) theo định dạng [x_min, y_min, x_max, y_max]
+
+Trả lời bằng định dạng JSON như sau:
+[
+  {
+    "name": "cơm",
+    "estimated_weight": 150,
+    "calories": 200,
+    "bounding_box": [120, 80, 300, 250]
+  },
+  {
+    "name": "thịt gà",
+    "estimated_weight": 153,
+    "calories": 212,
+    "bounding_box": [320, 103, 450, 256]
+  }
+]
+
+Chỉ bao gồm các món ăn. Không bao gồm các vật thể nền hoặc con người.
+"""
+
+
+def analyze_image(image_bytes: bytes) -> str:
+    image = Image.open(io.BytesIO(image_bytes))
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+    prompt = build_prompt()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Bạn là chuyên gia dinh dưỡng."},
+            {"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
+            ]}
+        ]
+    )
+    return response.choices[0].message.content

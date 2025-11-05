@@ -1,7 +1,9 @@
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import *
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from starlette.responses import JSONResponse
+
 from models_sql import *
 from database import init_db, get_session
 from openai_client import *
@@ -107,6 +109,28 @@ def analyze_result(data: UserProfileCreate, session: Session = Depends(get_sessi
     result = analyze_health(data.model_dump_json())
     return {"response": result}
 
+@app.post("/analyze_image")
+async def analyze(image: UploadFile = File(...)):
+    try:
+        image_bytes = await image.read()
+        # result_json = analyze_image(image_bytes)
+        # print("OpenAI response:", result_json)
+        # result = json.loads(result_json)
+        result = analyze_image(image_bytes)
+        return JSONResponse(content={"result": result})
+    except json.JSONDecodeError:
+        return JSONResponse(content={"error": "Không thể phân tích kết quả từ OpenAI"}, status_code=500)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+# result_analyze_image
+# [
+#   {
+#     "name": "Pizza",
+#     "calories": 285,
+#     "bounding_box": [120, 80, 300, 250] - [xmin, ymin, xmax, ymax]
+#   }
+# ]
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
