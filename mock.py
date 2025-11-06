@@ -57,3 +57,51 @@ USER_OPTIONS = {
         }
     ]
 }
+
+
+blood_test_sample = """
+
+--- BLOOD TEST ---
+CBC:
+  Hemoglobin (HGB): 10.8 g/dL 
+  Hematocrit (HCT): 33% 
+  WBC: 12.6 x10^3/µL 
+  Platelets (PLT): 210 x10^3/µL
+
+Metabolic panel:
+  Glucose (Fasting): 142 mg/dL
+  BUN: 18 mg/dL (ref 7-20)
+  Creatinine: 1.45 mg/dL 
+  eGFR: 56 mL/min/1.73m² 
+  ALT (SGPT): 34 U/L 
+  AST (SGOT): 40 U/L 
+
+Lipid panel:
+  Total Cholesterol: 218 mg/dL 
+  LDL-C: 142 mg/dL
+  HDL-C: 38 mg/dL
+  Triglycerides: 165 mg/dL 
+
+"""
+
+urine_test_sample = """
+
+--- URINE TEST ---
+Color: Yellow
+Appearance: Slightly turbid
+pH: 6.0
+Specific Gravity: 1.015
+
+Dipstick:
+  Leukocyte esterase: Positive
+  Nitrite: Positive
+  Protein: Trace
+  Glucose: Positive
+  Blood: Small
+
+Microscopy:
+  WBC: 8-12 /HPF - HIGH
+  RBC: 3-5 /HPF
+  Bacteria: Moderate - PRESENT
+
+"""

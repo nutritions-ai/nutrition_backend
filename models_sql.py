@@ -30,7 +30,6 @@ class UserProfile(SQLModel, table=True):
     blood_test: Optional[str] = None
     urine_test: Optional[str] = None
     last_updated: datetime = Field(default_factory=datetime.utcnow)
-    meal_plans: List[MealPlan] = Relationship(back_populates="user")
 
 MealPlan.user = Relationship(back_populates="meal_plans")
 

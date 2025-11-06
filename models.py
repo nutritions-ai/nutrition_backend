@@ -1,9 +1,5 @@
 from pydantic import BaseModel
-from typing import List
-
-class ChatMessage(BaseModel):
-    message: str
-
+from typing import List, Optional
 
 class MealItem(BaseModel):
     dish_name: str
@@ -34,3 +30,55 @@ class HealthAnalysis(BaseModel):
     abnormal_indicators: list[AbnormalIndicator]
     recommendations: Recommendations
     summary: str
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+    timestamp: Optional[str] = None
+
+class ChatHistory(BaseModel):
+    user_id: str
+    messages: List[ChatMessage]
+    message_count: int
+
+
+class Dish(BaseModel):
+    name: str
+    portion: str
+
+class Meal(BaseModel):
+    name: str
+    dishes: List[Dish]
+
+class DailyMealResponse(BaseModel):
+    meals: List[Meal]
+
+class UserProfileForAnalyze(BaseModel):
+    name: str
+    weight: str
+    height: str
+
+class DailyMealRequest(BaseModel):
+    user_profile: UserProfileForAnalyze
+    summary_result: str
+
+class BMI(BaseModel):
+    value: str
+    status: str
+    comment: str
+
+class Indicator(BaseModel):
+    name: str
+    value: str
+    unit: Optional[str]
+    normal_range: str
+    status: str
+    comment: str
+
+class AnalyzeResult(BaseModel):
+    bmi: BMI
+    indicators: List[Indicator]
+    general_evaluation: str
+    details: str
+    potential_risks: List[str]
+    advice: str
