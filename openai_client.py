@@ -8,7 +8,6 @@ from openai import OpenAI, APIError, RateLimitError, Timeout
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
 from constants import *
 from models import *
-from models_sql import UserProfile
 import json
 import time
 from pinecone import Pinecone, ServerlessSpec
@@ -134,33 +133,6 @@ client = OpenAI(
     base_url="https://aiportalapi.stu-platform.live/jpe",
     api_key="sk-e33XdbP5qVj57ONqvLnrpw"
 )
-
-
-def analyze_health(health_data: dict) -> dict:
-    # response = client.chat.completions.parse(
-    #     model="gpt-4o-mini",
-    #     messages=[
-    #         {"role": "system", "content": system_content_analyst},
-    #         {"role": "user", "content": f"Đây là dữ liệu người dùng: {health_data}"},
-    #     ],
-    #     response_format=HealthAnalysis,
-    #     temperature=0.2
-    # )
-    return health_data
-
-
-def create_meal(user_profile: UserProfile, user_options: dict) -> dict:
-    response = client.chat.completions.parse(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT_MEAL_PLAN},
-            {"role": "user",
-             "content": f"Đây là dữ liệu người dùng: {user_profile.model_dump_json()}, options: {user_options}"},
-        ],
-        temperature=0.6,
-        response_format=MealPlanData
-    )
-    return json.loads(response.choices[0].message.content)
 
 
 @retry(
