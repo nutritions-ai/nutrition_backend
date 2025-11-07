@@ -17,14 +17,6 @@ import service as crud
 from fastapi.middleware.cors import CORSMiddleware
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # If init_db is synchronous, run it in a separate thread and await completion
-    await asyncio.to_thread(init_db)
-    # If init_db is asynchronous, use: await init_db()
-    yield
-
-
 app = FastAPI(title="Health Chatbot API", lifespan=lifespan)
 
 app.add_middleware(
@@ -71,64 +63,19 @@ async def reset_chat(user_id: str):
     history.clear()
     return {"message": f"Chat history for {user_id} cleared."}
 
-
-@app.post("/profiles")
-def create_profile(data: UserProfileCreate, session: Session = Depends(get_session)):
-    return crud.create_user_profile(session, data)
-
-
-@app.get("/profiles/{user_id}")
-def read_profile(user_id: str, session: Session = Depends(get_session)):
-    return crud.get_user_profile(session, user_id)
-
-
-@app.get("/profiles")
-def list_profiles(session: Session = Depends(get_session)):
-    return crud.get_all_profiles(session)
-
-
-@app.put("/profiles/{user_id}")
-def update_profile(user_id: str, updates: UserProfileUpdate, session: Session = Depends(get_session)):
-    return crud.update_user_profile(session, user_id, updates)
-
-
-@app.delete("/profiles/{user_id}")
-def delete_profile(user_id: str, session: Session = Depends(get_session)):
-    return crud.delete_user_profile(session, user_id)
-
-
-@app.get("/users/{user_id}/meal-plans", response_model=List[MealPlanData])
-def get_meal_plans(user_id: str, session: Session = Depends(get_session)):
-    user_profile = session.exec(select(UserProfile).where(UserProfile.user_id == user_id)).first()
-    if not user_profile:
-        raise HTTPException(status_code=404, detail="User not found")
-    return [mp.get_data() for mp in user_profile.meal_plans]
-
-
-@app.post("/users/{user_id}/meal-plans", response_model=MealPlanData)
-def create_meal_plan(user_id: str, user_options: dict, session: Session = Depends(get_session)):
-    user_profile = session.exec(select(UserProfile).where(UserProfile.user_id == user_id)).first()
-    if not user_profile:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    new_plan = create_meal(user_profile, user_options)
-    crud.add_meal_plan(session, user_profile, MealPlanData(**new_plan))
-    return new_plan
-# -------------------------------------------------
 @app.post("/daily-meal", response_model=DailyMealResponse)
 def generate_daily_meal(request: DailyMealRequest):
     """
     Generate a personalized daily meal plan using OpenAI,
     structured and validated with the DailyMealResponse model.
     """
-
     prompt = f"""
     Based on this user's profile and summary:
     Name: {request.user_profile.name}
+    Age: {request.user_profile.age}
     Weight: {request.user_profile.weight} kg
     Height: {request.user_profile.height} cm
-    Summary: {request.summary_result}
-
+    Summary: {request.analyze_result}
     Create a JSON daily meal plan (3–7 meals).
     Each meal must include:
     - "name": meal name (e.g. Breakfast, Lunch, Dinner)
@@ -145,21 +92,6 @@ def generate_daily_meal(request: DailyMealRequest):
     )
     data = json.loads(response.choices[0].message.content)
     return DailyMealResponse(**data)
-
-mockMessages = [
-    {"role": "system", "content": SYSTEM_CHAT_PROMPT},
-    {"role": "user", "content": "Nam"},
-    {"role": "assistant", "content": "Nhập chiều cao"},
-    {"role": "user", "content": "212"},
-    {"role": "user", "content": "Nhập cân nặng"},
-    {"role": "user", "content": "70"},
-]
-
-
-@app.get("/chat")
-def chat_with_user():
-    return {"response": create_meal(HEALTH_DATA, USER_OPTIONS)}
-
 
 @app.get("/chat/user_summary")
 def chat_user_summary():
@@ -201,6 +133,7 @@ async def analyze_health(
         temperature=0.2
     )
     data = json.loads(response.choices[0].message.content)
+    print(data)
     return AnalyzeResult(**data)
 
 

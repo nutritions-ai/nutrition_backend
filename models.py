@@ -1,36 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-class MealItem(BaseModel):
-    dish_name: str
-    main_ingredients: List[str]
-    portion: str
-    health_reason: str
-
-class MealPlanData(BaseModel):
-    breakfast: List[MealItem]
-    lunch: List[MealItem]
-    dinner: List[MealItem]
-    snacks: List[MealItem]
-    summary: str
-
-class AbnormalIndicator(BaseModel):
-    name: str
-    level: str
-    explanation: str
-
-class Recommendations(BaseModel):
-    diet: str
-    exercise: str
-    lifestyle: str
-
-class HealthAnalysis(BaseModel):
-    overview: str
-    normal_indicators: list[str]
-    abnormal_indicators: list[AbnormalIndicator]
-    recommendations: Recommendations
-    summary: str
-
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -53,14 +23,11 @@ class Meal(BaseModel):
 class DailyMealResponse(BaseModel):
     meals: List[Meal]
 
-class UserProfileForAnalyze(BaseModel):
+class UserProfile(BaseModel):
     name: str
+    age: str
     weight: str
     height: str
-
-class DailyMealRequest(BaseModel):
-    user_profile: UserProfileForAnalyze
-    summary_result: str
 
 class BMI(BaseModel):
     value: str
@@ -82,3 +49,7 @@ class AnalyzeResult(BaseModel):
     details: str
     potential_risks: List[str]
     advice: str
+
+class DailyMealRequest(BaseModel):
+    user_profile: UserProfile
+    analyze_result: str
